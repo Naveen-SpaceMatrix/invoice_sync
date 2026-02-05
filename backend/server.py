@@ -644,11 +644,11 @@ async def get_n8n_workflow_json(user: User = Depends(get_current_user)):
             },
             {
                 "parameters": {
-                    "jsCode": `// Extract invoice numbers from email subject and body
+                    "jsCode": """// Extract invoice numbers from email subject and body
 // Sheet columns: A=S.No, B=Invoice No, C=Organization, D=status
 
 const invoicePatterns = [
-  /[A-Z]{2,4}[-/]?\\d{2,4}[-/]?\\d{2,6}/gi,  // Matches: INV-2024-001, TAX/2024/123, etc.
+  /[A-Z]{2,4}[-/]?\\d{2,4}[-/]?\\d{2,6}/gi,
   /INVOICE\\s*#?\\s*[A-Z0-9-]+/gi,
   /TAX\\s*INVOICE\\s*#?\\s*[A-Z0-9-]+/gi
 ];
@@ -697,7 +697,7 @@ for (const email of emails) {
   }
 }
 
-return results.map(r => ({json: r}));`
+return results.map(r => ({json: r}));"""
                 },
                 "id": "code-1",
                 "name": "Match Invoices",
