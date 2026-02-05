@@ -280,7 +280,7 @@ async def get_settings(user: User = Depends(get_current_user)):
             "google_sheet_url": None,
             "google_drive_folder_id": None
         }
-        await db.user_settings.insert_one(settings)
+        await db.user_settings.insert_one(settings.copy())
     return settings
 
 @api_router.put("/settings")
