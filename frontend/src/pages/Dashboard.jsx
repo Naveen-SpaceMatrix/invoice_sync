@@ -17,7 +17,7 @@ import { useNavigate } from "react-router-dom";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
-const StatCard = ({ icon, title, value, subtitle, color, delay }) => (
+const StatCard = ({ icon, title, value, subtitle, colorClass, bgClass, borderClass, delay }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -28,18 +28,76 @@ const StatCard = ({ icon, title, value, subtitle, color, delay }) => (
         <div className="flex items-start justify-between">
           <div>
             <p className="text-[#52525B] text-xs font-['IBM_Plex_Sans'] uppercase tracking-wider mb-2">{title}</p>
-            <p className={`font-['JetBrains_Mono'] text-3xl font-bold ${color}`}>{value}</p>
+            <p className={`font-['JetBrains_Mono'] text-3xl font-bold ${colorClass}`}>{value}</p>
             {subtitle && (
               <p className="text-[#A1A1AA] text-sm mt-1">{subtitle}</p>
             )}
           </div>
-          <div className={`w-10 h-10 rounded-md flex items-center justify-center ${color.replace('text-', 'bg-')}/10 border ${color.replace('text-', 'border-')}/20`}>
+          <div className={`w-10 h-10 rounded-md flex items-center justify-center ${bgClass} ${borderClass}`}>
             {icon}
           </div>
         </div>
       </CardContent>
     </Card>
   </motion.div>
+);
+
+const RecentRun = ({ run, index }) => {
+  const statusClass = run.status === 'completed' ? 'badge-success' : 
+                      run.status === 'running' ? 'badge-pending' : 'badge-error';
+  const dotClass = run.status === 'completed' ? 'bg-[#00FF94]' : 
+                   run.status === 'running' ? 'bg-[#FFD600]' : 'bg-[#FF2A2A]';
+  
+  return (
+    <div 
+      className="flex items-center justify-between p-3 bg-[#0A0A0A] border border-[#27272A] rounded-md"
+      data-testid={`recent-run-${index}`}
+    >
+      <div className="flex items-center gap-3">
+        <div className={`w-2 h-2 rounded-full ${dotClass}`} />
+        <div>
+          <p className="font-['JetBrains_Mono'] text-xs text-[#A1A1AA]">
+            {run.run_id}
+          </p>
+          <p className="text-xs text-[#52525B]">
+            {new Date(run.started_at).toLocaleString()}
+          </p>
+        </div>
+      </div>
+      <div className="text-right">
+        <span className={`text-xs px-2 py-1 rounded-full ${statusClass}`}>
+          {run.status}
+        </span>
+        <p className="text-xs text-[#52525B] mt-1">
+          {run.attachments_downloaded} downloaded
+        </p>
+      </div>
+    </div>
+  );
+};
+
+const AttachmentRow = ({ att, index }) => (
+  <tr 
+    className="border-b border-[#27272A]/50 hover:bg-[#1E1E1E] transition-colors"
+    data-testid={`attachment-row-${index}`}
+  >
+    <td className="py-3 px-4 font-['JetBrains_Mono'] text-sm text-[#FF5E00]">{att.invoice_number}</td>
+    <td className="py-3 px-4 text-sm text-white">{att.filename}</td>
+    <td className="py-3 px-4 text-sm text-[#A1A1AA] max-w-xs truncate">{att.email_subject}</td>
+    <td className="py-3 px-4 text-xs text-[#52525B]">{new Date(att.downloaded_at).toLocaleString()}</td>
+    <td className="py-3 px-4">
+      {att.drive_link && (
+        <a 
+          href={att.drive_link} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-[#FF5E00] hover:text-[#FF5E00]/80 text-sm"
+        >
+          View in Drive
+        </a>
+      )}
+    </td>
+  </tr>
 );
 
 const Dashboard = () => {
@@ -71,11 +129,10 @@ const Dashboard = () => {
       await axios.post(`${API}/workflow/trigger`, {}, {
         withCredentials: true
       });
-      // Refresh stats after triggering
       await fetchStats();
     } catch (error) {
       console.error("Failed to trigger workflow:", error);
-      if (error.response?.status === 400) {
+      if (error.response && error.response.status === 400) {
         navigate("/settings");
       }
     } finally {
@@ -92,10 +149,11 @@ const Dashboard = () => {
   }
 
   const invoiceStats = stats?.invoice_stats || { total: 0, not_updated: 0, matched: 0, downloaded: 0, not_matched: 0 };
+  const recentRuns = stats?.recent_runs || [];
+  const recentAttachments = stats?.recent_attachments || [];
 
   return (
     <div className="space-y-8" data-testid="dashboard-page">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="font-['IBM_Plex_Sans'] font-bold text-2xl text-white mb-1">Dashboard</h1>
@@ -116,13 +174,14 @@ const Dashboard = () => {
         </Button>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           icon={<FileText className="w-5 h-5 text-white" />}
           title="Total Invoices"
           value={invoiceStats.total}
-          color="text-white"
+          colorClass="text-white"
+          bgClass="bg-white/10"
+          borderClass="border border-white/20"
           delay={0}
         />
         <StatCard
@@ -130,7 +189,9 @@ const Dashboard = () => {
           title="Not Updated"
           value={invoiceStats.not_updated}
           subtitle="Pending processing"
-          color="text-[#FFD600]"
+          colorClass="text-[#FFD600]"
+          bgClass="bg-[#FFD600]/10"
+          borderClass="border border-[#FFD600]/20"
           delay={0.1}
         />
         <StatCard
@@ -138,7 +199,9 @@ const Dashboard = () => {
           title="Downloaded"
           value={invoiceStats.downloaded}
           subtitle="Saved to Drive"
-          color="text-[#00FF94]"
+          colorClass="text-[#00FF94]"
+          bgClass="bg-[#00FF94]/10"
+          borderClass="border border-[#00FF94]/20"
           delay={0.2}
         />
         <StatCard
@@ -146,14 +209,14 @@ const Dashboard = () => {
           title="Not Matched"
           value={invoiceStats.not_matched}
           subtitle="No email found"
-          color="text-[#FF2A2A]"
+          colorClass="text-[#FF2A2A]"
+          bgClass="bg-[#FF2A2A]/10"
+          borderClass="border border-[#FF2A2A]/20"
           delay={0.3}
         />
       </div>
 
-      {/* Quick Actions & Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Quick Actions */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -207,7 +270,6 @@ const Dashboard = () => {
           </Card>
         </motion.div>
 
-        {/* Recent Runs */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -221,40 +283,10 @@ const Dashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {stats?.recent_runs && stats.recent_runs.length > 0 ? (
+              {recentRuns.length > 0 ? (
                 <div className="space-y-3">
-                  {stats.recent_runs.map((run, index) => (
-                    <div 
-                      key={run.run_id}
-                      className="flex items-center justify-between p-3 bg-[#0A0A0A] border border-[#27272A] rounded-md"
-                      data-testid={`recent-run-${index}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`w-2 h-2 rounded-full ${
-                          run.status === 'completed' ? 'bg-[#00FF94]' : 
-                          run.status === 'running' ? 'bg-[#FFD600]' : 'bg-[#FF2A2A]'
-                        }`} />
-                        <div>
-                          <p className="font-['JetBrains_Mono'] text-xs text-[#A1A1AA]">
-                            {run.run_id}
-                          </p>
-                          <p className="text-xs text-[#52525B]">
-                            {new Date(run.started_at).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          run.status === 'completed' ? 'badge-success' : 
-                          run.status === 'running' ? 'badge-pending' : 'badge-error'
-                        }`}>
-                          {run.status}
-                        </span>
-                        <p className="text-xs text-[#52525B] mt-1">
-                          {run.attachments_downloaded} downloaded
-                        </p>
-                      </div>
-                    </div>
+                  {recentRuns.map((run, index) => (
+                    <RecentRun key={run.run_id} run={run} index={index} />
                   ))}
                 </div>
               ) : (
@@ -269,7 +301,6 @@ const Dashboard = () => {
         </motion.div>
       </div>
 
-      {/* Recent Attachments */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -283,7 +314,7 @@ const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {stats?.recent_attachments && stats.recent_attachments.length > 0 ? (
+            {recentAttachments.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -296,29 +327,8 @@ const Dashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {stats.recent_attachments.map((att, index) => (
-                      <tr 
-                        key={att.attachment_id} 
-                        className="border-b border-[#27272A]/50 hover:bg-[#1E1E1E] transition-colors"
-                        data-testid={`attachment-row-${index}`}
-                      >
-                        <td className="py-3 px-4 font-['JetBrains_Mono'] text-sm text-[#FF5E00]">{att.invoice_number}</td>
-                        <td className="py-3 px-4 text-sm text-white">{att.filename}</td>
-                        <td className="py-3 px-4 text-sm text-[#A1A1AA] max-w-xs truncate">{att.email_subject}</td>
-                        <td className="py-3 px-4 text-xs text-[#52525B]">{new Date(att.downloaded_at).toLocaleString()}</td>
-                        <td className="py-3 px-4">
-                          {att.drive_link && (
-                            <a 
-                              href={att.drive_link} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-[#FF5E00] hover:text-[#FF5E00]/80 text-sm"
-                            >
-                              View in Drive
-                            </a>
-                          )}
-                        </td>
-                      </tr>
+                    {recentAttachments.map((att, index) => (
+                      <AttachmentRow key={att.attachment_id} att={att} index={index} />
                     ))}
                   </tbody>
                 </table>
