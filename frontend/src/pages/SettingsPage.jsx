@@ -131,22 +131,22 @@ const SettingsPage = () => {
               </p>
               <div className="space-y-4 text-sm text-[#A1A1AA]">
                 <div>
-                  <p className="font-medium text-white mb-1">Google Sheet Format</p>
+                  <p className="font-medium text-white mb-1">Your Google Sheet Format</p>
                   <p className="text-xs">
-                    Your sheet should have columns: <code className="font-['JetBrains_Mono'] text-[#FF5E00]">invoice_number</code>, <code className="font-['JetBrains_Mono'] text-[#FF5E00]">status</code>
+                    Columns: <code className="font-['JetBrains_Mono'] text-[#FF5E00]">S.No</code> (A), <code className="font-['JetBrains_Mono'] text-[#FF5E00]">Invoice No</code> (B), <code className="font-['JetBrains_Mono'] text-[#FF5E00]">Organization</code> (C), <code className="font-['JetBrains_Mono'] text-[#FF5E00]">status</code> (D)
                   </p>
                   <p className="text-xs mt-1">
-                    Status values: <code className="font-['JetBrains_Mono'] text-[#FFD600]">not updated</code> will be processed
+                    Status: <code className="font-['JetBrains_Mono'] text-[#FFD600]">not updated</code> → processed → <code className="font-['JetBrains_Mono'] text-[#00FF94]">downloaded</code>
                   </p>
                 </div>
                 <div>
-                  <p className="font-medium text-white mb-1">Finding Your Drive Folder ID</p>
-                  <p className="text-xs">
-                    Open your Drive folder and copy the ID from the URL:<br/>
-                    <code className="font-['JetBrains_Mono'] text-[#52525B] text-xs">
-                      drive.google.com/drive/folders/<span className="text-[#FF5E00]">YOUR_FOLDER_ID</span>
-                    </code>
-                  </p>
+                  <p className="font-medium text-white mb-1">How to Use</p>
+                  <ol className="text-xs space-y-1 list-decimal list-inside">
+                    <li>Save these settings</li>
+                    <li>Go to <span className="text-[#FF5E00]">Workflow</span> → Download n8n JSON</li>
+                    <li>Import into your n8n instance</li>
+                    <li>Configure Google OAuth in n8n</li>
+                  </ol>
                 </div>
               </div>
             </div>
