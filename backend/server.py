@@ -543,6 +543,11 @@ async def get_n8n_workflow_json(user: User = Depends(get_current_user)):
     sheet_url = settings.get("google_sheet_url", "YOUR_GOOGLE_SHEET_URL") if settings else "YOUR_GOOGLE_SHEET_URL"
     folder_id = settings.get("google_drive_folder_id", "YOUR_DRIVE_FOLDER_ID") if settings else "YOUR_DRIVE_FOLDER_ID"
     
+    # Extract sheet ID from URL if full URL provided
+    sheet_id = sheet_url
+    if "spreadsheets/d/" in sheet_url:
+        sheet_id = sheet_url.split("spreadsheets/d/")[1].split("/")[0]
+    
     n8n_workflow = {
         "name": "Invoice Email Matching Workflow",
         "nodes": [
@@ -559,16 +564,16 @@ async def get_n8n_workflow_json(user: User = Depends(get_current_user)):
                     "operation": "read",
                     "documentId": {
                         "__rl": True,
-                        "value": sheet_url,
-                        "mode": "url"
+                        "value": sheet_id,
+                        "mode": "id"
                     },
                     "sheetName": {
                         "__rl": True,
-                        "value": "Sheet1",
-                        "mode": "list"
+                        "value": "gid=1919138850",
+                        "mode": "id"
                     },
                     "options": {
-                        "range": "A:Z"
+                        "range": "A:D"
                     }
                 },
                 "id": "sheets-1",
@@ -581,15 +586,16 @@ async def get_n8n_workflow_json(user: User = Depends(get_current_user)):
                         "id": "YOUR_CREDENTIAL_ID",
                         "name": "Google Sheets OAuth2"
                     }
-                }
+                },
+                "notes": "Sheet columns: A=S.No, B=Invoice No, C=Organization, D=status"
             },
             {
                 "parameters": {
                     "conditions": {
                         "options": {
-                            "caseSensitive": True,
+                            "caseSensitive": False,
                             "leftValue": "",
-                            "typeValidation": "strict"
+                            "typeValidation": "loose"
                         },
                         "conditions": [
                             {
@@ -610,7 +616,8 @@ async def get_n8n_workflow_json(user: User = Depends(get_current_user)):
                 "name": "Filter Not Updated",
                 "type": "n8n-nodes-base.filter",
                 "typeVersion": 2,
-                "position": [650, 300]
+                "position": [650, 300],
+                "notes": "Filter rows where status column (D) = 'not updated'"
             },
             {
                 "parameters": {
