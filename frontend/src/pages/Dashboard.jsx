@@ -223,7 +223,7 @@ const Dashboard = () => {
             <CardContent>
               {stats?.recent_runs && stats.recent_runs.length > 0 ? (
                 <div className="space-y-3">
-                  {stats.recent_runs.slice(0, 5).map((run, index) => (
+                  {stats.recent_runs.map((run, index) => (
                     <div 
                       key={run.run_id}
                       className="flex items-center justify-between p-3 bg-[#0A0A0A] border border-[#27272A] rounded-md"
