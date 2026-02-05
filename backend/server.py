@@ -644,11 +644,13 @@ async def get_n8n_workflow_json(user: User = Depends(get_current_user)):
             },
             {
                 "parameters": {
-                    "jsCode": """// Extract invoice numbers from email subject and body
+                    "jsCode": `// Extract invoice numbers from email subject and body
+// Sheet columns: A=S.No, B=Invoice No, C=Organization, D=status
+
 const invoicePatterns = [
-  /INV[-\\s]?\\d{4}[-\\s]?\\d{3,4}/gi,
-  /TAX[-\\s]?\\d{4}[-\\s]?\\d{3,4}/gi,
-  /INVOICE\\s*#?\\s*\\d+/gi
+  /[A-Z]{2,4}[-/]?\\d{2,4}[-/]?\\d{2,6}/gi,  // Matches: INV-2024-001, TAX/2024/123, etc.
+  /INVOICE\\s*#?\\s*[A-Z0-9-]+/gi,
+  /TAX\\s*INVOICE\\s*#?\\s*[A-Z0-9-]+/gi
 ];
 
 const emails = $input.all();
@@ -659,23 +661,35 @@ const results = [];
 for (const email of emails) {
   const subject = email.json.subject || '';
   const snippet = email.json.snippet || '';
-  const text = subject + ' ' + snippet;
+  const body = email.json.body || '';
+  const text = (subject + ' ' + snippet + ' ' + body).toUpperCase();
   
   let extractedNumbers = [];
   for (const pattern of invoicePatterns) {
     const matches = text.match(pattern);
     if (matches) {
-      extractedNumbers = extractedNumbers.concat(matches);
+      extractedNumbers = extractedNumbers.concat(matches.map(m => m.trim()));
     }
   }
   
-  // Find matching invoice
+  // Find matching invoice from sheet (Column B = "Invoice No")
   for (const inv of invoices) {
-    const invNumber = inv.json.invoice_number || inv.json.invoiceNumber;
-    if (extractedNumbers.some(n => n.includes(invNumber) || invNumber.includes(n.replace(/[-\\s]/g, '')))) {
+    const invNumber = (inv.json['Invoice No'] || inv.json.invoice_number || inv.json.invoiceNumber || '').toString().toUpperCase();
+    
+    if (!invNumber) continue;
+    
+    const matched = extractedNumbers.some(extracted => {
+      const cleanExtracted = extracted.replace(/[-\\s/]/g, '');
+      const cleanInv = invNumber.replace(/[-\\s/]/g, '');
+      return cleanExtracted.includes(cleanInv) || cleanInv.includes(cleanExtracted) || extracted.includes(invNumber);
+    });
+    
+    if (matched) {
       results.push({
         emailId: email.json.id,
-        invoiceNumber: invNumber,
+        invoiceNumber: inv.json['Invoice No'] || invNumber,
+        rowNumber: inv.json['S.No'],
+        organization: inv.json['Organization'],
         subject: subject,
         hasMatch: true
       });
@@ -683,13 +697,14 @@ for (const email of emails) {
   }
 }
 
-return results.map(r => ({json: r}));"""
+return results.map(r => ({json: r}));`
                 },
                 "id": "code-1",
                 "name": "Match Invoices",
                 "type": "n8n-nodes-base.code",
                 "typeVersion": 2,
-                "position": [1050, 300]
+                "position": [1050, 300],
+                "notes": "Matches invoice numbers from emails with Column B (Invoice No) from sheet"
             },
             {
                 "parameters": {
