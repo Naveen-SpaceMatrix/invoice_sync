@@ -751,23 +751,23 @@ return results.map(r => ({json: r}));`
                     "operation": "update",
                     "documentId": {
                         "__rl": True,
-                        "value": sheet_url,
-                        "mode": "url"
+                        "value": sheet_id,
+                        "mode": "id"
                     },
                     "sheetName": {
                         "__rl": True,
-                        "value": "Sheet1",
-                        "mode": "list"
+                        "value": "gid=1919138850",
+                        "mode": "id"
                     },
                     "columns": {
                         "mappingMode": "defineBelow",
                         "value": {
-                            "status": "downloaded",
-                            "drive_link": "={{ $json.webViewLink }}"
+                            "status": "downloaded"
                         }
                     },
                     "options": {
-                        "cellFormat": "USER_ENTERED"
+                        "cellFormat": "USER_ENTERED",
+                        "valueRenderOption": "UNFORMATTED_VALUE"
                     }
                 },
                 "id": "sheets-2",
@@ -780,7 +780,8 @@ return results.map(r => ({json: r}));`
                         "id": "YOUR_CREDENTIAL_ID",
                         "name": "Google Sheets OAuth2"
                     }
-                }
+                },
+                "notes": "Updates status column (D) from 'not updated' to 'downloaded'"
             }
         ],
         "connections": {
