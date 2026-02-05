@@ -7,6 +7,81 @@ import { Input } from "../components/ui/input";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+const InvoiceNumbers = ({ numbers }) => {
+  if (!numbers || numbers.length === 0) {
+    return <span className="text-[#52525B]">None extracted</span>;
+  }
+  return (
+    <span className="flex flex-wrap gap-2">
+      {numbers.map((num, i) => (
+        <span key={i} className="log-invoice px-2 py-0.5 bg-[#FF5E00]/10 rounded">
+          {num}
+        </span>
+      ))}
+    </span>
+  );
+};
+
+const ScanItem = ({ scan, index }) => {
+  const hasInvoices = scan.extracted_invoice_numbers && scan.extracted_invoice_numbers.length > 0;
+  
+  return (
+    <div
+      className="mb-4 pb-4 border-b border-[#27272A]/50 last:border-0"
+      data-testid={`email-scan-${index}`}
+    >
+      <div className="flex items-center gap-2 text-[#52525B] text-xs mb-2">
+        <span>[{scan.date}]</span>
+        <span className="log-info">SCAN</span>
+      </div>
+      
+      <div className="space-y-1">
+        <div className="flex items-start gap-2">
+          <span className="text-[#52525B] w-16 shrink-0">FROM:</span>
+          <span className="text-white">{scan.sender}</span>
+        </div>
+        <div className="flex items-start gap-2">
+          <span className="text-[#52525B] w-16 shrink-0">SUBJECT:</span>
+          <span className="text-white">{scan.subject}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[#52525B] w-16 shrink-0">ATTACH:</span>
+          {scan.has_attachment ? (
+            <span className="flex items-center gap-1 log-success">
+              <Paperclip className="w-3 h-3" />
+              YES
+            </span>
+          ) : (
+            <span className="log-error">NO</span>
+          )}
+        </div>
+        <div className="flex items-start gap-2">
+          <span className="text-[#52525B] w-16 shrink-0">INVOICES:</span>
+          <InvoiceNumbers numbers={scan.extracted_invoice_numbers} />
+        </div>
+      </div>
+      
+      <div className="mt-3 flex items-center gap-2">
+        {scan.matched_invoice ? (
+          <>
+            <CheckCircle className="w-4 h-4 text-[#00FF94]" />
+            <span className="log-success">
+              MATCHED: {scan.matched_invoice}
+            </span>
+          </>
+        ) : hasInvoices ? (
+          <>
+            <XCircle className="w-4 h-4 text-[#FF2A2A]" />
+            <span className="log-error">NO MATCH FOUND</span>
+          </>
+        ) : (
+          <span className="log-info">NO INVOICE NUMBER DETECTED</span>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const EmailScansPage = () => {
   const [scans, setScans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,13 +104,21 @@ const EmailScansPage = () => {
     fetchScans();
   }, []);
 
-  const filteredScans = scans.filter(scan =>
-    scan.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    scan.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    scan.extracted_invoice_numbers.some(num => 
-      num.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  );
+  const getFilteredScans = () => {
+    if (!searchTerm) return scans;
+    const term = searchTerm.toLowerCase();
+    return scans.filter(scan => {
+      if (scan.subject.toLowerCase().includes(term)) return true;
+      if (scan.sender.toLowerCase().includes(term)) return true;
+      const nums = scan.extracted_invoice_numbers || [];
+      for (let i = 0; i < nums.length; i++) {
+        if (nums[i].toLowerCase().includes(term)) return true;
+      }
+      return false;
+    });
+  };
+
+  const filteredScans = getFilteredScans();
 
   if (loading) {
     return (
@@ -47,13 +130,11 @@ const EmailScansPage = () => {
 
   return (
     <div className="space-y-6" data-testid="email-scans-page">
-      {/* Header */}
       <div>
         <h1 className="font-['IBM_Plex_Sans'] font-bold text-2xl text-white mb-1">Email Scans</h1>
         <p className="text-[#A1A1AA] text-sm">Gmail messages scanned for invoice attachments</p>
       </div>
 
-      {/* Search */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -71,7 +152,6 @@ const EmailScansPage = () => {
         </div>
       </motion.div>
 
-      {/* Terminal-style output */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -91,76 +171,7 @@ const EmailScansPage = () => {
             {filteredScans.length > 0 ? (
               <div className="terminal-output max-h-[600px] overflow-y-auto">
                 {filteredScans.map((scan, index) => (
-                  <motion.div
-                    key={scan.scan_id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.2, delay: index * 0.05 }}
-                    className="mb-4 pb-4 border-b border-[#27272A]/50 last:border-0"
-                    data-testid={`email-scan-${index}`}
-                  >
-                    {/* Timestamp */}
-                    <div className="flex items-center gap-2 text-[#52525B] text-xs mb-2">
-                      <span>[{scan.date}]</span>
-                      <span className="log-info">SCAN</span>
-                    </div>
-                    
-                    {/* Email Details */}
-                    <div className="space-y-1">
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#52525B] w-16 shrink-0">FROM:</span>
-                        <span className="text-white">{scan.sender}</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#52525B] w-16 shrink-0">SUBJECT:</span>
-                        <span className="text-white">{scan.subject}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[#52525B] w-16 shrink-0">ATTACH:</span>
-                        {scan.has_attachment ? (
-                          <span className="flex items-center gap-1 log-success">
-                            <Paperclip className="w-3 h-3" />
-                            YES
-                          </span>
-                        ) : (
-                          <span className="log-error">NO</span>
-                        )}
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <span className="text-[#52525B] w-16 shrink-0">INVOICES:</span>
-                        {scan.extracted_invoice_numbers.length > 0 ? (
-                          <span className="flex flex-wrap gap-2">
-                            {scan.extracted_invoice_numbers.map((num, i) => (
-                              <span key={i} className="log-invoice px-2 py-0.5 bg-[#FF5E00]/10 rounded">
-                                {num}
-                              </span>
-                            ))}
-                          </span>
-                        ) : (
-                          <span className="text-[#52525B]">None extracted</span>
-                        )}
-                      </div>
-                    </div>
-                    
-                    {/* Match Status */}
-                    <div className="mt-3 flex items-center gap-2">
-                      {scan.matched_invoice ? (
-                        <>
-                          <CheckCircle className="w-4 h-4 text-[#00FF94]" />
-                          <span className="log-success">
-                            MATCHED: {scan.matched_invoice}
-                          </span>
-                        </>
-                      ) : scan.extracted_invoice_numbers.length > 0 ? (
-                        <>
-                          <XCircle className="w-4 h-4 text-[#FF2A2A]" />
-                          <span className="log-error">NO MATCH FOUND</span>
-                        </>
-                      ) : (
-                        <span className="log-info">NO INVOICE NUMBER DETECTED</span>
-                      )}
-                    </div>
-                  </motion.div>
+                  <ScanItem key={scan.scan_id} scan={scan} index={index} />
                 ))}
               </div>
             ) : (
@@ -179,7 +190,6 @@ const EmailScansPage = () => {
         </Card>
       </motion.div>
 
-      {/* Legend */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
